@@ -1,0 +1,72 @@
+version: "3.9"
+services:
+  #############################
+  # MYSQL DB SERVICES
+  #############################
+  db:
+    image: mariadb:latest
+    volumes:
+      - db_data:/var/lib/mysql/data
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=projectdb
+
+  #############################
+  # PHPMYADMIN SERVICES
+  #############################
+  pma:
+    image: phpmyadmin:latest
+    restart: always
+    healthcheck:
+      interval: 120ms
+      retries: 5
+      start_period: 60ms
+      test: |
+        touch /tmp/healthcheck.txt &&
+        mkdir /tmp/healthcheck &&
+        mv /tmp/healthcheck.txt /tmp/healthcheck &&
+        cd /tmp/healthcheck &&
+        echo "hello my docker container is working fine" >> healthcheck.txt &&
+        cat healthcheck.txt &&
+        rm healthcheck.txt &&
+        cd .. &&
+        rmdir /tmp/healthcheck
+        cls
+      timeout: 30ms
+    environment:
+      - PMA_ARBITRARY=1
+    ports:
+      - "5000:80"
+    depends_on:
+      - db
+    volumes:
+      - pma_data:/var/lib/phpmyadmin/data
+
+  #############################
+  # WP APP SERVICES
+  #############################
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:latest
+    volumes:
+      - wordpress:/var/www/html
+      - plugins:/var/www/html/wp-content/plugins
+    ports:
+      - "8000:80"
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: root
+      WORDPRESS_DB_NAME: projectdb
+
+  #############################
+  # PERSISTENT DATA
+  #############################
+volumes:
+  db_data:
+  pma_data:
+  wordpress:
+  plugins:
